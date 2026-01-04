@@ -1,0 +1,77 @@
+#pragma once
+
+#include <stddef.h>
+
+#include "allocators.h"
+#include "assert.h"
+#include "base.h"
+#include "stdbool.h"
+
+#define DEFAULT_TOKEN_ARRAY_SIZE 100
+#define NO_TOKEN_FOUND -1
+
+#define S(s) (Str){.str = s, sizeof(s) - 1}
+#define STR_ARRAY(...) {.list = (Str[]){__VA_ARGS__}, .size = sizeof((Str[]){__VA_ARGS__}) / sizeof(Str), .capacity = sizeof((Str[]){__VA_ARGS__}) / sizeof(Str)}
+
+typedef struct Str {
+  char *str;
+  size_t size;
+} Str;
+
+typedef struct Token {
+  Str value;
+  Vec2 pos;
+} Token;
+
+typedef enum CharFilter {
+  NONE,
+  ALPHANUMERIC,
+  NUMBERS,
+  LETTERS,
+  SYMBOLS,
+} CharFilter;
+
+typedef struct StrArray {
+  Str *list;
+  size_t size;
+  size_t capacity;
+} StrArray;
+
+typedef struct TokenArray {
+  Token *list;
+  size_t size;
+  size_t capacity;
+} TokenArray;
+
+#define toStackStr(str, cStr) \
+  char cStr[(str).size + 1];  \
+  toCString((str), cStr)
+
+Str wrapStr(char *cStr);
+Str wrapStrN(char *cStr, size_t size);
+Str newStr(Arena *arena, char *cStr);
+Str allocStr(Arena *arena, size_t size);
+Str copyStr(Arena *arena, Str original);
+Str sliceStr(Str src, int a, int b);
+
+void toCString(Str str, char *cStr);
+size_t cStringSize(char *cStr);
+bool strEq(Str s1, Str s2);
+bool strEqCString(Str str, char *cStr);
+bool isBlank(Str str);
+int charIndex(Str src, char c, int startIndex);
+int strSeekFirstNonBlank(Str str);
+void strFill(Str str, char c);
+
+StrArray strArrayInit(Arena *arena, size_t capacity);
+int strArrayContains(StrArray strArray, Str str);
+size_t strArrayJoin(StrArray array, char *result);
+StrArray wrapStrArray(Str *stackBuffer, int size);
+void pushStrArray(StrArray *array, Str str);
+
+TokenArray tokenArrayInit(Arena *arena, size_t capacity);
+void pushTokenArray(TokenArray *array, Token token);
+void strTokens(TokenArray *result, Str str, char delimiter, bool tokenizePunctuatuion);
+Vec2 getTokenPos(Str token, Str str);
+int getNextRightToken(TokenArray *tokens, int index);
+int getNextLeftToken(TokenArray *tokens, int index);
