@@ -1,6 +1,8 @@
 #pragma once
 
 #ifdef ASSERTS_ENABLED
+#include <stdlib.h>
+
 #include "logger.h"
 #define assert(condition)                                  \
   {                                                        \

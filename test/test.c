@@ -1,6 +1,8 @@
 
 #include "test.h"
 
+#define ASSERTS_ENABLED
+
 #include "../lib/assert.h"
 #include "../lib/logger.h"
 
