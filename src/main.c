@@ -8,6 +8,8 @@ struct termios origTermios;
 #define RUN_TESTS
 
 void initApp(App* app, Arena* arena) {
+  initArena(arena, MB(1));
+
   *app = (App){
       .masterArena = arena,
   };
