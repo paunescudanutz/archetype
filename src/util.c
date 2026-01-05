@@ -1,5 +1,8 @@
 #include "main.h"
 
+int clamp(int value, int min, int max) {
+  return fmax(min, fmin(value, max));
+}
 // NOTE: vibe coded
 void disableRawMode(struct termios* origTermios) {
   tcsetattr(STDIN_FILENO, TCSAFLUSH, origTermios);

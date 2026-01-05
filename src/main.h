@@ -1,4 +1,5 @@
 
+#include <math.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
