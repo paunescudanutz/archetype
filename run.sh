@@ -3,5 +3,6 @@
 BIN_NAME="your_binary_name_here"
 BIN_PATH="bin/$BIN_NAME"
 
+./build.sh
 # Run the binary
 ./$BIN_PATH 
