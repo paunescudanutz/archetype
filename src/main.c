@@ -15,6 +15,10 @@ void initApp(App* app, Arena* arena) {
   };
 }
 
+void releaseResources(App* app) {
+  fclose(logFile);
+}
+
 int main(int argc, char* argv[]) {
   initLogger();
   logInfo("Started:");
@@ -31,5 +35,6 @@ int main(int argc, char* argv[]) {
   printf("hello");
 
   logInfo("Stopped!");
+  releaseResources(&app);
   return 0;
 }
