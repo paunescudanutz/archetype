@@ -1,8 +1,17 @@
-#include "../lib/logger.h"
+#include "main.h"
+
 #include "../test/test.h"
 
 FILE* logFile;
+struct termios origTermios;
+
 #define RUN_TESTS
+
+void initApp(App* app, Arena* arena) {
+  *app = (App){
+      .masterArena = arena,
+  };
+}
 
 int main(int argc, char* argv[]) {
   initLogger();
@@ -12,6 +21,11 @@ int main(int argc, char* argv[]) {
   runTests();
 #endif
 
+  Arena arena = {0};
+  App app = {0};
+  initApp(&app, &arena);
+
+  // your code here
   printf("hello");
 
   logInfo("Stopped!");
