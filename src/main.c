@@ -7,8 +7,15 @@ struct termios origTermios;
 
 #define RUN_TESTS
 
-void initApp(App* app, Arena* arena) {
-  initArena(arena, MB(1));
+void initApp(App* app) {
+  initLogger();
+  logInfo("Started:");
+
+#ifdef RUN_TESTS
+  runTests();
+#endif
+
+  Arena* arena = arenaCreate(MB(1));
 
   *app = (App){
       .masterArena = arena,
@@ -20,16 +27,8 @@ void releaseResources(App* app) {
 }
 
 int main(int argc, char* argv[]) {
-  initLogger();
-  logInfo("Started:");
-
-#ifdef RUN_TESTS
-  runTests();
-#endif
-
-  Arena arena = {0};
   App app = {0};
-  initApp(&app, &arena);
+  initApp(&app);
 
   // your code here
   printf("hello");

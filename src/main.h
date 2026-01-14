@@ -6,6 +6,7 @@
 
 #include "../lib/allocators.h"
 #include "../lib/logger.h"
+#include "../lib/str.h"
 
 extern struct termios origTermios;
 

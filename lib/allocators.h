@@ -40,7 +40,7 @@ typedef struct ObjPool {
   size_t freeSlotsWrite;
 } ObjPool;
 
-Arena* createArena(bytes_t capacity);
+Arena* arenaCreate(bytes_t capacity);
 void initArena(Arena* arena, bytes_t capacity);
 void* arenaAlloc(Arena* arena, bytes_t bytes);
 void arenaReset(Arena* arena);

@@ -7,5 +7,5 @@ BIN_PATH="bin/$BIN_NAME"
 rm $BIN_PATH
 
 # compile
-gcc -g src/*.c lib/*c test/*.c -lm -o $BIN_PATH
+gcc -g src/*.c lib/*.c test/*.c -lm -o $BIN_PATH
 

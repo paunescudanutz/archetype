@@ -1,11 +1,12 @@
 #include "allocators.h"
+
 #include "assert.h"
 #include "logger.h"
 
-Arena *createArena(bytes_t capacity) {
+Arena* arenaCreate(bytes_t capacity) {
   int headerSize = sizeof(Arena);
 
-  Arena *arena = calloc(1, headerSize + capacity);
+  Arena* arena = calloc(1, headerSize + capacity);
   if (arena == NULL) {
     logError("Could not allocate new arena");
     exit(0);
@@ -19,31 +20,34 @@ Arena *createArena(bytes_t capacity) {
   return arena;
 }
 
-void arenaFree(Arena *arena) { free(arena); }
-
-// Avoid using this init. it cannot be cleared with the arenaFree function
-void initArena(Arena *arena, bytes_t capacity) {
-  arena->base = calloc(1, capacity);
-
-  if (arena->base == NULL) {
-    logError("Could not allocate new buffer");
-    exit(0);
-  }
-
-  arena->capacity = capacity;
-  arena->offset = arena->base;
-  arena->size = 0;
+void arenaFree(Arena* arena) {
+  free(arena);
 }
 
-void *arenaAlloc(Arena *arena, bytes_t newBlockInBytes) {
+// Avoid using this init. it cannot be cleared with the arenaFree function
+// void initArena(Arena* arena, bytes_t capacity) {
+//   arena->base = calloc(1, capacity);
+
+//   if (arena->base == NULL) {
+//     logError("Could not allocate new buffer");
+//     exit(0);
+//   }
+
+//   arena->capacity = capacity;
+//   arena->offset = arena->base;
+//   arena->size = 0;
+// }
+
+void* arenaAlloc(Arena* arena, bytes_t newBlockInBytes) {
   if (arena->size + newBlockInBytes > arena->capacity) {
-    logError("New allocation of %ld bytes block exceeds capacity of "
-             "%ld bytes",
-             newBlockInBytes, arena->capacity);
+    logError(
+        "New allocation of %ld bytes block exceeds capacity of "
+        "%ld bytes",
+        newBlockInBytes, arena->capacity);
     exit(0);
   }
 
-  void *currentPtr = arena->offset;
+  void* currentPtr = arena->offset;
   arena->offset += newBlockInBytes;
 
   arena->size += newBlockInBytes;
@@ -51,7 +55,7 @@ void *arenaAlloc(Arena *arena, bytes_t newBlockInBytes) {
   return currentPtr;
 }
 
-void arenaReset(Arena *arena) {
+void arenaReset(Arena* arena) {
   if (arena->size == 0) {
     return;
   }
@@ -61,9 +65,7 @@ void arenaReset(Arena *arena) {
   arena->size = 0;
 }
 
-void initObjPool(Arena *arena, ObjPool *objPool, bytes_t elementSize,
-                 size_t capacity) {
-
+void initObjPool(Arena* arena, ObjPool* objPool, bytes_t elementSize, size_t capacity) {
   bytes_t bufferCapacity = elementSize * capacity;
   bytes_t headerCapacity = capacity * sizeof(FreeSlot);
 
@@ -74,15 +76,15 @@ void initObjPool(Arena *arena, ObjPool *objPool, bytes_t elementSize,
       .size = 0,
       .elementSize = elementSize,
       .buffer = arenaAlloc(arena, bufferCapacity),
-      .freeSlots = (FreeSlot *)arenaAlloc(arena, headerCapacity),
+      .freeSlots = (FreeSlot*)arenaAlloc(arena, headerCapacity),
       .freeSlotsSize = 0,
       .freeSlotsRead = 0,
       .freeSlotsWrite = 0,
   };
 }
 
-void *objPoolAlloc(ObjPool *objPool) {
-  void *newPtr = NULL;
+void* objPoolAlloc(ObjPool* objPool) {
+  void* newPtr = NULL;
 
   if (objPool->freeSlotsSize != 0) {
     newPtr = objPool->freeSlots[objPool->freeSlotsRead].ptr;
@@ -106,7 +108,7 @@ void *objPoolAlloc(ObjPool *objPool) {
   return newPtr;
 }
 
-void objPoolFree(ObjPool *objPool, void *ptr) {
+void objPoolFree(ObjPool* objPool, void* ptr) {
   if (objPool->size == 0) {
     return;
   }
@@ -118,8 +120,7 @@ void objPoolFree(ObjPool *objPool, void *ptr) {
     return;
   }
 
-  if (objPool->buffer > ptr ||
-      (objPool->buffer + (objPool->capacity * objPool->elementSize)) < ptr) {
+  if (objPool->buffer > ptr || (objPool->buffer + (objPool->capacity * objPool->elementSize)) < ptr) {
     logError("Illegal free: ptr not allocated in (this) memory block");
     exit(0);
   }
