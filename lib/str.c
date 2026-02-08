@@ -1,11 +1,40 @@
 #include "str.h"
 
+#include <stdarg.h>
 #include <stddef.h>
 #include <string.h>
 
 #include "allocators.h"
 #include "assert.h"
 #include "logger.h"
+
+Str strTrim(Arena* arena, Str str) {
+  int start = 0;
+  int end = str.size - 1;
+  bool startFound = false;
+
+  for (int i = 0; i < str.size; i++) {
+    char c = str.str[i];
+
+    if (!startFound && c != ' ') {
+      start = i;
+      startFound = true;
+    }
+
+    if (c != ' ') {
+      end = i;
+    }
+  }
+
+  size_t size = end - start + 1;
+  char* buf = arenaAlloc(arena, size);
+  memcpy(buf, str.str + start, size);
+
+  return (Str){
+      .size = size,
+      .str = buf,
+  };
+}
 
 Str strJoin4(Arena* arena, Str a, Str b, Str c, Str d) {
   StrArray arr = strArrayInit(arena, 4);
@@ -121,6 +150,7 @@ StrArray wrapStrArray(Str* stackBuffer, int capacity) {
       .list = stackBuffer,
   };
 }
+
 StrArray strArrayInit(Arena* arena, size_t capacity) {
   return (StrArray){
       .capacity = capacity,
@@ -130,13 +160,17 @@ StrArray strArrayInit(Arena* arena, size_t capacity) {
   };
 }
 
-TokenArray createTokenArray(Arena* arena, size_t capacity) {
-  return (TokenArray){
+TokenArray* createTokenArray(Arena* arena, size_t capacity) {
+  TokenArray* result = arenaAlloc(arena, sizeof(TokenArray));
+
+  *result = (TokenArray){
       .capacity = capacity,
       .size = 0,
       .strArray = arenaAlloc(arena, sizeof(Str) * capacity),
       .posArray = arenaAlloc(arena, sizeof(Vec2) * capacity),
   };
+
+  return result;
 }
 
 int getNextRightToken(TokenArray* tokens, int position) {
@@ -192,13 +226,31 @@ int getNextLeftToken(TokenArray* tokens, int position) {
   return NO_TOKEN_FOUND;
 }
 
+TokenArray* strTokenize(Arena* arena, int capacity, Str str, char delimiter, bool tokenizePunctuatuion) {
+  TokenArray* tokens = createTokenArray(arena, capacity);
+  strTokens(tokens, str, delimiter, tokenizePunctuatuion);
+  return tokens;
+}
+
+typedef struct SplitSpec {
+  bool tokenizePunctuation;  // consider punctuation sings as separate tokens
+  // TODO: implement sometime
+  bool reversedOrder;  // split from last char to first
+  int splitLimit;      // will split first N delimiters, put the rest into single slice. values below 0 are considered infinity
+
+} SplitSpec;
+
 // TODO: enhance the token array object with extra arrays that gather more information about tokens such as what kind of stuff is in each one
 //  like is it punctuation, or is it numeric or alphanumeric and such, for fast querying
 void strTokens(TokenArray* result, Str str, char delimiter, bool tokenizePunctuation) {
   assert(result != NULL);
   assert(result->capacity > 0);
-  assert(result->size == 0);
   assert(str.size > 0);
+
+  if (result->size > 0) {
+    // logWarn("Token array is not empty, contents will be overwritten");
+    result->size = 0;
+  }
 
   int i = 0;
   int start = 0;
