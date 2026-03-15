@@ -8,7 +8,113 @@
 #include "assert.h"
 #include "logger.h"
 
-Str strTrim(Arena* arena, Str str) {
+void matcherInit(MatchCursor* cursor, Str str) {
+  *cursor = (MatchCursor){
+      .cursor = 0,
+      .isMatch = true,
+      .str = str,
+  };
+}
+bool matchUntil(MatchCursor* cursor, Str match) {
+  if (cursor->cursor != 0 && !cursor->isMatch) {
+    return false;
+  }
+
+  Str str = cursor->str;
+  u32 j = 0;
+  bool potentialMatch = false;
+
+  for (u32 i = cursor->cursor; i < str.size; i++) {
+    char c = str.str[i];
+
+    if (c == match.str[j]) {
+      potentialMatch = true;
+      j++;
+
+      if (potentialMatch && j == match.size) {
+        bool newValue = cursor->isMatch && true;
+        cursor->isMatch = newValue;
+        cursor->cursor = i + 1;
+        return true;
+      }
+    } else {
+      potentialMatch = true;
+      j = 0;
+    }
+  }
+
+  logStr(match, "MatchUntil failed for ");
+  cursor->isMatch = false;
+  return false;
+}
+
+bool matchExact(MatchCursor* cursor, Str match) {
+  if (cursor->cursor != 0 && !cursor->isMatch) {
+    return false;
+  }
+
+  u32 expectedEnd = cursor->cursor + match.size;
+  Str slice = sliceStr(cursor->str, cursor->cursor, expectedEnd);
+
+  if (strEq(slice, match)) {
+    bool newValue = cursor->isMatch && true;
+    cursor->isMatch = newValue;
+    cursor->cursor = expectedEnd;
+    return newValue;
+  }
+
+  logStr(match, "Match exact failed for ");
+  cursor->isMatch = false;
+  return false;
+}
+
+void matchAny(MatchCursor* cursor, char expected) {
+  if (cursor->cursor != 0 && !cursor->isMatch) {
+    return;
+  }
+
+  for (u32 i = cursor->cursor; i < cursor->str.size; i++) {
+    char c = cursor->str.str[i];
+
+    if (c != expected) {
+      cursor->cursor = i;
+      return;
+    }
+  }
+}
+
+Str strTrim(Str original) {
+  int start = 0;
+  int end = original.size - 1;
+
+  for (int i = 0; i < original.size; i++) {
+    char c = original.str[i];
+
+    if (c != ' ') {
+      start = i;
+      break;
+    }
+  }
+
+  for (int i = original.size - 1; i > 0; i--) {
+    char c = original.str[i];
+
+    if (c != ' ') {
+      end = i;
+      break;
+    }
+  }
+
+  size_t size = end - start + 1;
+
+  return (Str){
+      .size = size,
+      .str = &original.str[start],
+  };
+}
+
+// Deprecated, use the one that returns a slice instead
+Str strTrimDeprecated(Arena* arena, Str str) {
   int start = 0;
   int end = str.size - 1;
   bool startFound = false;
@@ -226,26 +332,28 @@ int getNextLeftToken(TokenArray* tokens, int position) {
   return NO_TOKEN_FOUND;
 }
 
-TokenArray* strTokenize(Arena* arena, int capacity, Str str, char delimiter, bool tokenizePunctuatuion) {
+TokenArray* strTokenize(Arena* arena, int capacity, Str str, char delimiter, SplitSpec* spec) {
   TokenArray* tokens = createTokenArray(arena, capacity);
-  strTokens(tokens, str, delimiter, tokenizePunctuatuion);
+  strTokens(tokens, str, delimiter, spec);
   return tokens;
 }
 
-typedef struct SplitSpec {
-  bool tokenizePunctuation;  // consider punctuation sings as separate tokens
-  // TODO: implement sometime
-  bool reversedOrder;  // split from last char to first
-  int splitLimit;      // will split first N delimiters, put the rest into single slice. values below 0 are considered infinity
-
-} SplitSpec;
-
 // TODO: enhance the token array object with extra arrays that gather more information about tokens such as what kind of stuff is in each one
 //  like is it punctuation, or is it numeric or alphanumeric and such, for fast querying
-void strTokens(TokenArray* result, Str str, char delimiter, bool tokenizePunctuation) {
+void strTokens(TokenArray* result, Str str, char delimiter, SplitSpec* spec) {
   assert(result != NULL);
   assert(result->capacity > 0);
   assert(str.size > 0);
+
+  bool tokenizePunctuation = false;
+  s32 splitLimit = -1;
+  char stopChar = -1;
+
+  if (spec != NULL) {
+    tokenizePunctuation = spec->tokenizePunctuation;
+    splitLimit = spec->splitLimit;
+    stopChar = spec->stopAtFirstOccurance;
+  }
 
   if (result->size > 0) {
     // logWarn("Token array is not empty, contents will be overwritten");
@@ -256,12 +364,19 @@ void strTokens(TokenArray* result, Str str, char delimiter, bool tokenizePunctua
   int start = 0;
   int end = 0;
 
+  s32 splitCount = 0;
+
   while (true) {
     if (i == str.size) {
       break;
     }
 
     char c = str.str[i];
+
+    if (stopChar != -1 && c == stopChar) {
+      pushTokenArray(result, sliceStr(str, start, end), (Vec2){start, end});
+      break;
+    }
 
     if (tokenizePunctuation && (c == '/' || c == '*' || c == '&' || c == '#' || c == '!' || c == '+' || c == '-' || c == '>' || c == '<' || c == ')' || c == '(' || c == ']' || c == '[' || c == '}' || c == '{' || c == ',' || c == '.' || c == '=' || c == ';' || c == '(' || c == ')')) {
       if (start < end) {
@@ -275,7 +390,9 @@ void strTokens(TokenArray* result, Str str, char delimiter, bool tokenizePunctua
 
       start = i + 1;
       end = start;
-    } else if (c == delimiter) {
+    } else if (c == delimiter && (splitLimit == -1 || (splitLimit != -1 && splitCount < splitLimit))) {
+      splitCount++;
+      // logInfo("asd: %u", splitCount);
       if (start < end) {
         pushTokenArray(result, sliceStr(str, start, end), (Vec2){start, end - 1});
       }
